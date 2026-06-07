@@ -23,10 +23,13 @@ const CandidateLayout: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (user) {
-      const count = notificationService.getUnreadCount(user.id);
-      setUnreadCount(count);
-    }
+    const loadUnreadCount = async () => {
+      if (user) {
+        const count = await notificationService.getUnreadCount(user.id);
+        setUnreadCount(count);
+      }
+    };
+    loadUnreadCount();
   }, [user]);
 
   const menuItems = [
@@ -83,7 +86,7 @@ const CandidateLayout: React.FC = () => {
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
               <Avatar icon={<UserOutlined />} />
-              <Text style={{ color: 'white' }}>{user?.fullName}</Text>
+              <Text style={{ color: 'white' }}>{user?.full_name}</Text>
             </Space>
           </Dropdown>
         </Space>

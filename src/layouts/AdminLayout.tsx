@@ -74,7 +74,7 @@ const AdminLayout: React.FC = () => {
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
           <Space style={{ cursor: 'pointer' }}>
             <Avatar icon={<UserOutlined />} />
-            <Text style={{ color: 'white' }}>{user?.fullName}</Text>
+            <Text style={{ color: 'white' }}>{user?.full_name}</Text>
           </Space>
         </Dropdown>
       </Header>
