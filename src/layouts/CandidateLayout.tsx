@@ -111,7 +111,7 @@ const CandidateLayout: React.FC = () => {
             <Outlet />
           </Content>
           <Footer style={{ textAlign: 'center', background: 'transparent' }}>
-            © 2024 University Admission System
+            © 2026 University Admission System
           </Footer>
         </Layout>
       </Layout>

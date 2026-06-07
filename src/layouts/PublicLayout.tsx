@@ -17,7 +17,7 @@ const PublicLayout: React.FC = () => {
         <Outlet />
       </Content>
       <Footer style={{ textAlign: 'center' }}>
-        © 2024 University Admission System. All rights reserved.
+        © 2026 University Admission System. All rights reserved.
       </Footer>
     </Layout>
   );

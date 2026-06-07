@@ -101,7 +101,7 @@ const AdminLayout: React.FC = () => {
             <Outlet />
           </Content>
           <Footer style={{ textAlign: 'center', background: 'transparent' }}>
-            © 2024 University Admission System - Admin Panel
+            © 2026 University Admission System - Admin Panel
           </Footer>
         </Layout>
       </Layout>
