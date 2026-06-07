@@ -1,35 +1,34 @@
-# University Online Admission Management System
+# Hệ thống Quản lý Tuyển sinh Đại học Trực tuyến
 
-A complete full-stack university admission management system built with React 18, TypeScript, and Ant Design.
+Hệ thống full stack quản lý tuyển sinh trực tuyến đại học xây dựng bằng React 18, TypeScript, Ant Design.
 
-## Features
+## Tính năng
+### Thí sinh
+- Đăng ký / Đăng nhập tài khoản
+- Quản lý hồ sơ cá nhân
+- Nộp đơn xét tuyển với khả năng tải lên tài liệu
+- Theo dõi trạng thái đơn đăng ký
+- Xem kết quả xét tuyển
+- Nhận thông báo
 
-### Candidates
-- Register/Login with account
-- Complete profile management
-- Submit admission applications with document uploads
-- Track application status
-- View admission results
-- Receive notifications
+### Quản trị viên
+- Bảng điều khiển với phân tích và biểu đồ
+- Quản lý trường đại học (Thêm/Sửa/Xóa)
+- Quản lý ngành học (Thêm/Sửa/Xóa)
+- Quản lý tổ hợp môn (Thêm/Sửa/Xóa)
+- Xem xét và quyết định đơn đăng ký (Phê duyệt/Từ chối)
+- Quản lý người dùng (Khóa/Mở khóa tài khoản, đặt lại mật khẩu)
 
-### Administrators
-- Dashboard with analytics and charts
-- University management (CRUD)
-- Major management (CRUD)
-- Subject combination management (CRUD)
-- Application review and decision (Approve/Reject)
-- User management (Lock/Unlock accounts, reset passwords)
-
-## Technology Stack
+## Công nghệ sử dụng
 
 - **Frontend**: React 18 + TypeScript
-- **UI Library**: Ant Design 5.x
-- **Routing**: React Router v6
-- **Charts**: Recharts
-- **State Management**: Context API
-- **Storage**: localStorage (no backend)
+- **Thư viện giao diện**: Ant Design 5.x
+- **Định tuyến**: React Router v6
+- **Biểu đồ**: Recharts
+- **Quản lý trạng thái**: Context API
+- **Lưu trữ**: localStorage (không cần backend)
 
-## Installation
+## Cài đặt
 
 1. Install dependencies:
 ```bash
