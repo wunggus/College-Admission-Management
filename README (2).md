@@ -26,7 +26,7 @@ Hệ thống full stack quản lý tuyển sinh trực tuyến đại học xây
 - **Định tuyến**: React Router v6
 - **Biểu đồ**: Recharts
 - **Quản lý trạng thái**: Context API
-- **Lưu trữ**: localStorage (không cần backend)
+- **Lưu trữ**: localStorage (không backend)
 
 ## Cài đặt
 
