@@ -20,11 +20,20 @@ const SubjectCombinationManagement: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const comboData = subjectCombinationService.getAll();
-    const majorData = majorService.getAll();
-    setCombinations(comboData);
-    setMajors(majorData);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [comboData, majorData] = await Promise.all([
+        subjectCombinationService.getAll(),
+        majorService.getAll()
+      ]);
+      setCombinations(comboData);
+      setMajors(majorData);
+    } catch (error) {
+      message.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAdd = () => {
@@ -39,10 +48,14 @@ const SubjectCombinationManagement: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleDelete = (id: string) => {
-    subjectCombinationService.delete(id);
-    message.success('Subject combination deleted successfully');
-    loadData();
+  const handleDelete = async (id: string) => {
+    try {
+      await subjectCombinationService.delete(id);
+      message.success('Subject combination deleted successfully');
+      await loadData();
+    } catch (error) {
+      message.error('Failed to delete subject combination');
+    }
   };
 
   const handleSubmit = async (values: any) => {
@@ -56,7 +69,7 @@ const SubjectCombinationManagement: React.FC = () => {
         message.success('Subject combination created successfully');
       }
       setModalVisible(false);
-      loadData();
+      await loadData();
     } catch (error: any) {
       message.error(error.message || 'Operation failed');
     } finally {
@@ -84,7 +97,7 @@ const SubjectCombinationManagement: React.FC = () => {
     {
       title: 'Major',
       key: 'major',
-      render: (_: any, record: SubjectCombination) => getMajorName(record.majorId),
+      render: (_: any, record: SubjectCombination) => getMajorName(record.major_id),
     },
     {
       title: 'Subjects',
@@ -100,8 +113,8 @@ const SubjectCombinationManagement: React.FC = () => {
     },
     {
       title: 'Created Date',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
@@ -146,6 +159,7 @@ const SubjectCombinationManagement: React.FC = () => {
           columns={columns}
           dataSource={combinations}
           rowKey="id"
+          loading={loading}
           pagination={{ pageSize: 10 }}
         />
       </Card>
@@ -175,7 +189,7 @@ const SubjectCombinationManagement: React.FC = () => {
           </Form.Item>
           
           <Form.Item
-            name="majorId"
+            name="major_id"
             label="Major"
             rules={[{ required: true, message: 'Please select major' }]}
           >

@@ -1,43 +1,52 @@
-import { storage, getCurrentDateTime } from '../utils/storage';
+import { supabase } from '../utils/supabase';
 import { User } from '../types';
 
 export const userService = {
-  getAll: (): User[] => {
-    return storage.get<User[]>(storage.getKeys().USERS) || [];
+  getAll: async (): Promise<User[]> => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch users');
+    return data as User[];
   },
 
-  getCandidates: (): User[] => {
-    const users = userService.getAll();
-    return users.filter(u => u.role === 'candidate');
+  getCandidates: async (): Promise<User[]> => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('role', 'candidate')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch candidates');
+    return data as User[];
   },
 
-  lockAccount: (userId: string): void => {
-    const users = userService.getAll();
-    const index = users.findIndex(u => u.id === userId);
-    
-    if (index !== -1) {
-      users[index].isLocked = true;
-      storage.set(storage.getKeys().USERS, users);
-    }
+  lockAccount: async (userId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('users')
+      .update({ is_locked: true })
+      .eq('id', userId);
+
+    if (error) throw new Error('Failed to lock account');
   },
 
-  unlockAccount: (userId: string): void => {
-    const users = userService.getAll();
-    const index = users.findIndex(u => u.id === userId);
-    
-    if (index !== -1) {
-      users[index].isLocked = false;
-      storage.set(storage.getKeys().USERS, users);
-    }
+  unlockAccount: async (userId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('users')
+      .update({ is_locked: false })
+      .eq('id', userId);
+
+    if (error) throw new Error('Failed to unlock account');
   },
 
-  resetPassword: (userId: string, newPassword: string): void => {
-    const users = userService.getAll();
-    const index = users.findIndex(u => u.id === userId);
-    
-    if (index !== -1) {
-      users[index].password = newPassword;
-      storage.set(storage.getKeys().USERS, users);
-    }
+  resetPassword: async (userId: string, newPassword: string): Promise<void> => {
+    const { error } = await supabase
+      .from('users')
+      .update({ password: newPassword })
+      .eq('id', userId);
+
+    if (error) throw new Error('Failed to reset password');
   },
 };

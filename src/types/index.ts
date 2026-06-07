@@ -2,64 +2,64 @@ export interface User {
   id: string;
   email: string;
   password: string;
-  fullName: string;
-  dateOfBirth?: string;
+  full_name: string;
+  date_of_birth?: string;
   gender?: 'male' | 'female' | 'other';
-  phoneNumber?: string;
+  phone_number?: string;
   address?: string;
-  nationalId?: string;
+  national_id?: string;
   role: 'candidate' | 'admin';
-  isLocked: boolean;
-  createdAt: string;
+  is_locked: boolean;
+  created_at: string;
 }
 
 export interface University {
   id: string;
   name: string;
   description: string;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface Major {
   id: string;
   name: string;
-  universityId: string;
-  createdAt: string;
+  university_id: string;
+  created_at: string;
 }
 
 export interface SubjectCombination {
   id: string;
   name: string;
   code: string;
-  majorId: string;
+  major_id: string;
   subjects: string[];
-  createdAt: string;
+  created_at: string;
 }
 
 export interface Application {
   id: string;
-  userId: string;
-  universityId: string;
-  majorId: string;
-  subjectCombinationId: string;
-  examScore: number;
-  priorityCategory: string;
+  user_id: string;
+  university_id: string;
+  major_id: string;
+  subject_combination_id: string;
+  exam_score: number;
+  priority_category: string;
   notes: string;
-  transcriptFile?: string;
-  idCardFile?: string;
+  transcript_file?: string;
+  id_card_file?: string;
   status: 'pending' | 'approved' | 'rejected';
-  submissionDate: string;
-  updatedAt: string;
+  submission_date: string;
+  updated_at: string;
 }
 
 export interface Notification {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
   message: string;
   type: 'success' | 'error' | 'info' | 'warning';
-  isRead: boolean;
-  createdAt: string;
+  is_read: boolean;
+  created_at: string;
 }
 
 export interface LoginCredentials {

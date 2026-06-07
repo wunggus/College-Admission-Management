@@ -1,70 +1,96 @@
-import { storage, generateId, getCurrentDateTime } from '../utils/storage';
+import { supabase } from '../utils/supabase';
 import { User, LoginCredentials, RegisterData } from '../types';
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<User> => {
-    const users = storage.get<User[]>(storage.getKeys().USERS) || [];
-    const user = users.find(
-      u => u.email === credentials.email && u.password === credentials.password && !u.isLocked
-    );
-    
-    if (!user) {
+    // Direct query to users table - no Supabase Auth
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', credentials.email)
+      .eq('password', credentials.password)
+      .eq('is_locked', false);
+
+    if (error) {
+      console.error('Login error:', error);
+      throw new Error('Database error');
+    }
+
+    if (!data || data.length === 0) {
       throw new Error('Invalid credentials or account locked');
     }
-    
-    storage.set(storage.getKeys().AUTH, user);
-    return user;
+
+    const user = data[0];
+    sessionStorage.setItem('user', JSON.stringify(user));
+    return user as User;
   },
 
   register: async (data: RegisterData): Promise<User> => {
-    const users = storage.get<User[]>(storage.getKeys().USERS) || [];
-    
-    if (users.some(u => u.email === data.email)) {
+    // Check if user exists
+    const { data: existing } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', data.email);
+
+    if (existing && existing.length > 0) {
       throw new Error('Email already exists');
     }
-    
-    const newUser: User = {
-      id: generateId(),
+
+    // Create new user
+    const newUser = {
       email: data.email,
       password: data.password,
-      fullName: data.fullName,
-      phoneNumber: data.phoneNumber,
+      full_name: data.fullName,
+      phone_number: data.phoneNumber,
       role: 'candidate',
-      isLocked: false,
-      createdAt: getCurrentDateTime(),
+      is_locked: false,
+      created_at: new Date().toISOString(),
     };
-    
-    users.push(newUser);
-    storage.set(storage.getKeys().USERS, users);
-    storage.set(storage.getKeys().AUTH, newUser);
-    
-    return newUser;
+
+    const { data: created, error } = await supabase
+      .from('users')
+      .insert([newUser])
+      .select();
+
+    if (error) {
+      console.error('Register error:', error);
+      throw new Error('Registration failed');
+    }
+
+    if (!created || created.length === 0) {
+      throw new Error('Registration failed');
+    }
+
+    sessionStorage.setItem('user', JSON.stringify(created[0]));
+    return created[0] as User;
   },
 
   logout: (): void => {
-    storage.remove(storage.getKeys().AUTH);
+    sessionStorage.removeItem('user');
   },
 
   getCurrentUser: (): User | null => {
-    return storage.get<User>(storage.getKeys().AUTH);
+    const user = sessionStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
   },
 
   updateProfile: async (userId: string, data: Partial<User>): Promise<User> => {
-    const users = storage.get<User[]>(storage.getKeys().USERS) || [];
-    const userIndex = users.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) {
-      throw new Error('User not found');
+    const { data: updated, error } = await supabase
+      .from('users')
+      .update(data)
+      .eq('id', userId)
+      .select();
+
+    if (error) {
+      console.error('Update error:', error);
+      throw new Error('Failed to update profile');
     }
-    
-    users[userIndex] = { ...users[userIndex], ...data };
-    storage.set(storage.getKeys().USERS, users);
-    
-    const currentUser = storage.get<User>(storage.getKeys().AUTH);
-    if (currentUser && currentUser.id === userId) {
-      storage.set(storage.getKeys().AUTH, users[userIndex]);
+
+    if (!updated || updated.length === 0) {
+      throw new Error('Failed to update profile');
     }
-    
-    return users[userIndex];
+
+    sessionStorage.setItem('user', JSON.stringify(updated[0]));
+    return updated[0] as User;
   },
 };

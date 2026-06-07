@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Popconfirm, message, Card, Typography, Tag, Modal, Input } from 'antd';
 import { LockOutlined, UnlockOutlined, ReloadOutlined } from '@ant-design/icons';
 import { userService } from '../../services/user.service';
-import { Application, User } from '../../types';
+import { User } from '../../types';
 
 const { Title } = Typography;
 
@@ -17,23 +17,36 @@ const UserManagement: React.FC = () => {
     loadUsers();
   }, []);
 
-  const loadUsers = () => {
+  const loadUsers = async () => {
     setLoading(true);
-    const allUsers = userService.getAll();
-    setUsers(allUsers.filter(u => u.role === 'candidate'));
-    setLoading(false);
+    try {
+      const allUsers = await userService.getAll();
+      setUsers(allUsers.filter(u => u.role === 'candidate'));
+    } catch (error) {
+      message.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLock = (userId: string) => {
-    userService.lockAccount(userId);
-    message.success('Account locked successfully');
-    loadUsers();
+  const handleLock = async (userId: string) => {
+    try {
+      await userService.lockAccount(userId);
+      message.success('Account locked successfully');
+      await loadUsers();
+    } catch (error) {
+      message.error('Failed to lock account');
+    }
   };
 
-  const handleUnlock = (userId: string) => {
-    userService.unlockAccount(userId);
-    message.success('Account unlocked successfully');
-    loadUsers();
+  const handleUnlock = async (userId: string) => {
+    try {
+      await userService.unlockAccount(userId);
+      message.success('Account unlocked successfully');
+      await loadUsers();
+    } catch (error) {
+      message.error('Failed to unlock account');
+    }
   };
 
   const handleResetPassword = (user: User) => {
@@ -42,19 +55,23 @@ const UserManagement: React.FC = () => {
     setResetPasswordVisible(true);
   };
 
-  const confirmResetPassword = () => {
+  const confirmResetPassword = async () => {
     if (selectedUser && newPassword) {
-      userService.resetPassword(selectedUser.id, newPassword);
-      message.success('Password reset successfully');
-      setResetPasswordVisible(false);
+      try {
+        await userService.resetPassword(selectedUser.id, newPassword);
+        message.success('Password reset successfully');
+        setResetPasswordVisible(false);
+      } catch (error) {
+        message.error('Failed to reset password');
+      }
     }
   };
 
   const columns = [
     {
       title: 'Full Name',
-      dataIndex: 'fullName',
-      key: 'fullName',
+      dataIndex: 'full_name',
+      key: 'full_name',
     },
     {
       title: 'Email',
@@ -63,21 +80,21 @@ const UserManagement: React.FC = () => {
     },
     {
       title: 'Phone Number',
-      dataIndex: 'phoneNumber',
-      key: 'phoneNumber',
+      dataIndex: 'phone_number',
+      key: 'phone_number',
     },
     {
       title: 'Registration Date',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
       title: 'Status',
       key: 'status',
       render: (_: any, record: User) => (
-        <Tag color={record.isLocked ? 'red' : 'green'}>
-          {record.isLocked ? 'Locked' : 'Active'}
+        <Tag color={record.is_locked ? 'red' : 'green'}>
+          {record.is_locked ? 'Locked' : 'Active'}
         </Tag>
       ),
     },
@@ -86,7 +103,7 @@ const UserManagement: React.FC = () => {
       key: 'actions',
       render: (_: any, record: User) => (
         <Space>
-          {record.isLocked ? (
+          {record.is_locked ? (
             <Button
               type="link"
               icon={<UnlockOutlined />}
@@ -138,7 +155,7 @@ const UserManagement: React.FC = () => {
         onOk={confirmResetPassword}
         onCancel={() => setResetPasswordVisible(false)}
       >
-        <p>Reset password for: <strong>{selectedUser?.fullName}</strong></p>
+        <p>Reset password for: <strong>{selectedUser?.full_name}</strong></p>
         <Input.Password
           placeholder="Enter new password"
           value={newPassword}

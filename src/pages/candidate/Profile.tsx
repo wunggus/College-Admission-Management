@@ -14,13 +14,13 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (user) {
       form.setFieldsValue({
-        fullName: user.fullName,
-        dateOfBirth: user.dateOfBirth ? dayjs(user.dateOfBirth) : null,
+        full_name: user.full_name,
+        date_of_birth: user.date_of_birth ? dayjs(user.date_of_birth) : null,
         gender: user.gender,
-        phoneNumber: user.phoneNumber,
+        phone_number: user.phone_number,
         email: user.email,
         address: user.address,
-        nationalId: user.nationalId,
+        national_id: user.national_id,
       });
     }
   }, [user, form]);
@@ -29,8 +29,12 @@ const Profile: React.FC = () => {
     setLoading(true);
     try {
       const updatedUser = await authService.updateProfile(user!.id, {
-        ...values,
-        dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : undefined,
+        full_name: values.full_name,
+        date_of_birth: values.date_of_birth ? values.date_of_birth.format('YYYY-MM-DD') : undefined,
+        gender: values.gender,
+        phone_number: values.phone_number,
+        address: values.address,
+        national_id: values.national_id,
       });
       updateUser(updatedUser);
       message.success('Profile updated successfully!');
@@ -49,19 +53,19 @@ const Profile: React.FC = () => {
           layout="vertical"
           onFinish={onFinish}
           initialValues={{
-            fullName: user?.fullName,
+            full_name: user?.full_name,
             email: user?.email,
           }}
         >
           <Form.Item
-            name="fullName"
+            name="full_name"
             label="Full Name"
             rules={[{ required: true, message: 'Please enter your full name' }]}
           >
             <Input placeholder="Full Name" />
           </Form.Item>
 
-          <Form.Item name="dateOfBirth" label="Date of Birth">
+          <Form.Item name="date_of_birth" label="Date of Birth">
             <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
           </Form.Item>
 
@@ -74,7 +78,7 @@ const Profile: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="phoneNumber"
+            name="phone_number"
             label="Phone Number"
             rules={[{ required: true, message: 'Please enter your phone number' }]}
           >
@@ -89,7 +93,7 @@ const Profile: React.FC = () => {
             <TextArea rows={3} placeholder="Your Address" />
           </Form.Item>
 
-          <Form.Item name="nationalId" label="National ID (CCCD)">
+          <Form.Item name="national_id" label="National ID (CCCD)">
             <Input placeholder="National ID" />
           </Form.Item>
 

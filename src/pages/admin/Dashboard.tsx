@@ -5,54 +5,63 @@ import { UserOutlined, FileTextOutlined, CheckCircleOutlined, ClockCircleOutline
 import { applicationService } from '../../services/application.service';
 import { universityService } from '../../services/university.service';
 import { userService } from '../../services/user.service';
-import { Application } from '../../types';
 import { majorService } from '../../services/major.service';
 
 const AdminDashboard: React.FC = () => {
-  const [applications, setApplications] = useState<Application[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [universityStats, setUniversityStats] = useState<any[]>([]);
   const [majorStats, setMajorStats] = useState<any[]>([]);
   const [totalCandidates, setTotalCandidates] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const allApps = applicationService.getAll();
-    setApplications(allApps);
-    
-    const appStats = applicationService.getStats();
-    setStats(appStats);
-    
-    const candidates = userService.getCandidates();
-    setTotalCandidates(candidates.length);
-    
-    // Applications by University
-    const universities = universityService.getAll();
-    const univStats = universities.map(univ => ({
-      name: univ.name,
-      Applications: allApps.filter(app => app.universityId === univ.id).length,
-    })).filter(item => item.Applications > 0);
-    setUniversityStats(univStats);
-    
-    // Applications by Major (Top 5)
-    const majorMap = new Map();
-    const allMajors = majorService.getAll();
-
-    allApps.forEach(app => {
-      const major = allMajors.find(m => m.id === app.majorId);
-      const majorName = major ? major.name : 'Unknown Major';
-      const count = majorMap.get(majorName) || 0;
-      majorMap.set(majorName, count + 1);
-    });
-
-    const majorStatsData = Array.from(majorMap.entries())
-      .map(([name, count]) => ({
-        name: name.length > 20 ? name.substring(0, 20) + '...' : name,
-        Amount: count,
-      }))
-      .sort((a, b) => b.Amount - a.Amount)
-      .slice(0, 5);
-    setMajorStats(majorStatsData);
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [appStats, candidates, universities, allApps, allMajors] = await Promise.all([
+        applicationService.getStats(),
+        userService.getCandidates(),
+        universityService.getAll(),
+        applicationService.getAll(),
+        majorService.getAll()
+      ]);
+      
+      setStats(appStats);
+      setTotalCandidates(candidates.length);
+      
+      // Applications by University
+      const univStats = universities.map(univ => ({
+        name: univ.name,
+        Applications: allApps.filter(app => app.university_id === univ.id).length,
+      })).filter(item => item.Applications > 0);
+      setUniversityStats(univStats);
+      
+      // Applications by Major (Top 5)
+      const majorMap = new Map();
+      allApps.forEach(app => {
+        const major = allMajors.find(m => m.id === app.major_id);
+        const majorName = major ? major.name : 'Unknown Major';
+        const count = majorMap.get(majorName) || 0;
+        majorMap.set(majorName, count + 1);
+      });
+
+      const majorStatsData = Array.from(majorMap.entries())
+        .map(([name, count]) => ({
+          name: name.length > 20 ? name.substring(0, 20) + '...' : name,
+          Amount: count,
+        }))
+        .sort((a, b) => b.Amount - a.Amount)
+        .slice(0, 5);
+      setMajorStats(majorStatsData);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const STATUS_COLORS = ['#faad14', '#52c41a', '#ff4d4f'];
 
@@ -61,6 +70,10 @@ const AdminDashboard: React.FC = () => {
     { name: 'Approved', value: stats.approved },
     { name: 'Rejected', value: stats.rejected },
   ];
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>

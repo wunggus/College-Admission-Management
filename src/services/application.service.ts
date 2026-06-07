@@ -1,79 +1,118 @@
-import { storage, generateId, getCurrentDateTime } from '../utils/storage';
+import { supabase } from '../utils/supabase';
 import { Application } from '../types';
 import { notificationService } from './notification.service';
 
 export const applicationService = {
-  getAll: (): Application[] => {
-    return storage.get<Application[]>(storage.getKeys().APPLICATIONS) || [];
+  getAll: async (): Promise<Application[]> => {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .order('submission_date', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch applications');
+    return data as Application[];
   },
 
-  getByUser: (userId: string): Application[] => {
-    const applications = applicationService.getAll();
-    return applications.filter(a => a.userId === userId);
+  getByUser: async (userId: string): Promise<Application[]> => {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('submission_date', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch applications');
+    return data as Application[];
   },
 
-  getById: (id: string): Application | null => {
-    const applications = applicationService.getAll();
-    return applications.find(a => a.id === id) || null;
+  getById: async (id: string): Promise<Application | null> => {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) return null;
+    return data as Application;
   },
 
-  create: (data: Omit<Application, 'id' | 'status' | 'submissionDate' | 'updatedAt'>): Application => {
-    const applications = applicationService.getAll();
-    const newApplication: Application = {
-      ...data,
-      id: generateId(),
+  create: async (data: {
+    user_id: string;
+    university_id: string;
+    major_id: string;
+    subject_combination_id: string;
+    exam_score: number;
+    priority_category: string;
+    notes: string;
+    transcript_file?: string;
+    id_card_file?: string;
+  }): Promise<Application> => {
+    const newApplication = {
+      user_id: data.user_id,
+      university_id: data.university_id,
+      major_id: data.major_id,
+      subject_combination_id: data.subject_combination_id,
+      exam_score: data.exam_score,
+      priority_category: data.priority_category,
+      notes: data.notes,
+      transcript_file: data.transcript_file,
+      id_card_file: data.id_card_file,
       status: 'pending',
-      submissionDate: getCurrentDateTime(),
-      updatedAt: getCurrentDateTime(),
+      submission_date: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
-    
-    applications.push(newApplication);
-    storage.set(storage.getKeys().APPLICATIONS, applications);
-    
-    notificationService.create({
-      userId: data.userId,
+
+    const { data: createdApp, error } = await supabase
+      .from('applications')
+      .insert([newApplication])
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to submit application');
+
+    // Create notification
+    await notificationService.create({
+      user_id: data.user_id,
       title: 'Application Submitted',
       message: 'Your application has been submitted successfully and is pending review.',
       type: 'success',
     });
-    
-    return newApplication;
+
+    return createdApp as Application;
   },
 
-  updateStatus: (id: string, status: Application['status'], userId: string): Application => {
-    const applications = applicationService.getAll();
-    const index = applications.findIndex(a => a.id === id);
-    
-    if (index === -1) {
-      throw new Error('Application not found');
-    }
-    
-    applications[index] = {
-      ...applications[index],
-      status,
-      updatedAt: getCurrentDateTime(),
-    };
-    
-    storage.set(storage.getKeys().APPLICATIONS, applications);
-    
+  updateStatus: async (id: string, status: Application['status'], userId: string): Promise<Application> => {
+    const { data: updatedApp, error } = await supabase
+      .from('applications')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to update application status');
+
     const statusMessage = status === 'approved' ? 'approved' : 'rejected';
-    notificationService.create({
-      userId,
+    await notificationService.create({
+      user_id: userId,
       title: `Application ${status}`,
       message: `Your application has been ${statusMessage}. ${status === 'approved' ? 'Congratulations!' : 'Please contact support for more information.'}`,
       type: status === 'approved' ? 'success' : 'error',
     });
-    
-    return applications[index];
+
+    return updatedApp as Application;
   },
 
-  getStats: (): { total: number; pending: number; approved: number; rejected: number } => {
-    const applications = applicationService.getAll();
-    return {
-      total: applications.length,
-      pending: applications.filter(a => a.status === 'pending').length,
-      approved: applications.filter(a => a.status === 'approved').length,
-      rejected: applications.filter(a => a.status === 'rejected').length,
-    };
+  getStats: async (): Promise<{ total: number; pending: number; approved: number; rejected: number }> => {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('status');
+
+    if (error) throw new Error('Failed to fetch stats');
+
+    const total = data.length;
+    const pending = data.filter(a => a.status === 'pending').length;
+    const approved = data.filter(a => a.status === 'approved').length;
+    const rejected = data.filter(a => a.status === 'rejected').length;
+
+    return { total, pending, approved, rejected };
   },
 };

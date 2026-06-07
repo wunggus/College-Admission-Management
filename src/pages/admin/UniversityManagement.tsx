@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, Space, Popconfirm, message, Card, Typography } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { universityService } from '../../services/university.service';
-import { Major, University } from '../../types';
+import { University } from '../../types';
 
 const { Title } = Typography;
 
@@ -17,9 +17,16 @@ const UniversityManagement: React.FC = () => {
     loadUniversities();
   }, []);
 
-  const loadUniversities = () => {
-    const data = universityService.getAll();
-    setUniversities(data);
+  const loadUniversities = async () => {
+    setLoading(true);
+    try {
+      const data = await universityService.getAll();
+      setUniversities(data);
+    } catch (error) {
+      message.error('Failed to load universities');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAdd = () => {
@@ -34,10 +41,14 @@ const UniversityManagement: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleDelete = (id: string) => {
-    universityService.delete(id);
-    message.success('University deleted successfully');
-    loadUniversities();
+  const handleDelete = async (id: string) => {
+    try {
+      await universityService.delete(id);
+      message.success('University deleted successfully');
+      await loadUniversities();
+    } catch (error) {
+      message.error('Failed to delete university');
+    }
   };
 
   const handleSubmit = async (values: any) => {
@@ -51,7 +62,7 @@ const UniversityManagement: React.FC = () => {
         message.success('University created successfully');
       }
       setModalVisible(false);
-      loadUniversities();
+      await loadUniversities();
     } catch (error: any) {
       message.error(error.message || 'Operation failed');
     } finally {
@@ -72,8 +83,8 @@ const UniversityManagement: React.FC = () => {
     },
     {
       title: 'Created Date',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
@@ -118,6 +129,7 @@ const UniversityManagement: React.FC = () => {
           columns={columns}
           dataSource={universities}
           rowKey="id"
+          loading={loading}
           pagination={{ pageSize: 10 }}
         />
       </Card>

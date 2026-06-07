@@ -1,45 +1,57 @@
-import { storage, generateId, getCurrentDateTime } from '../utils/storage';
+import { supabase } from '../utils/supabase';
 import { University } from '../types';
 
 export const universityService = {
-  getAll: (): University[] => {
-    return storage.get<University[]>(storage.getKeys().UNIVERSITIES) || [];
+  getAll: async (): Promise<University[]> => {
+    const { data, error } = await supabase
+      .from('universities')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch universities');
+    return data as University[];
   },
 
-  getById: (id: string): University | null => {
-    const universities = universityService.getAll();
-    return universities.find(u => u.id === id) || null;
+  getById: async (id: string): Promise<University | null> => {
+    const { data, error } = await supabase
+      .from('universities')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) return null;
+    return data as University;
   },
 
-  create: (data: Omit<University, 'id' | 'createdAt'>): University => {
-    const universities = universityService.getAll();
-    const newUniversity: University = {
-      ...data,
-      id: generateId(),
-      createdAt: getCurrentDateTime(),
-    };
-    
-    universities.push(newUniversity);
-    storage.set(storage.getKeys().UNIVERSITIES, universities);
-    return newUniversity;
+  create: async (data: Omit<University, 'id' | 'createdAt'>): Promise<University> => {
+    const { data: newUniversity, error } = await supabase
+      .from('universities')
+      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to create university');
+    return newUniversity as University;
   },
 
-  update: (id: string, data: Partial<University>): University => {
-    const universities = universityService.getAll();
-    const index = universities.findIndex(u => u.id === id);
-    
-    if (index === -1) {
-      throw new Error('University not found');
-    }
-    
-    universities[index] = { ...universities[index], ...data };
-    storage.set(storage.getKeys().UNIVERSITIES, universities);
-    return universities[index];
+  update: async (id: string, data: Partial<University>): Promise<University> => {
+    const { data: updatedUniversity, error } = await supabase
+      .from('universities')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to update university');
+    return updatedUniversity as University;
   },
 
-  delete: (id: string): void => {
-    const universities = universityService.getAll();
-    const filtered = universities.filter(u => u.id !== id);
-    storage.set(storage.getKeys().UNIVERSITIES, filtered);
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('universities')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error('Failed to delete university');
   },
 };

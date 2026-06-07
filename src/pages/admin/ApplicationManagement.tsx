@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Select, Input, Space, Tag, message, Card, Typography, Modal, Descriptions, Row, Col } from 'antd';
-import { EyeOutlined, CheckOutlined, CloseOutlined, SearchOutlined } from '@ant-design/icons';
+import { Table, Button, Select, Input, Space, Tag, message, Card, Typography, Row, Col, Modal } from 'antd';
+import { EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { applicationService } from '../../services/application.service';
 import { universityService } from '../../services/university.service';
@@ -20,21 +20,34 @@ const ApplicationManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [universityFilter, setUniversityFilter] = useState<string>('all');
   const [searchText, setSearchText] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [universities, setUniversities] = useState<any[]>([]);
 
   useEffect(() => {
-    loadApplications();
+    loadData();
   }, []);
 
   useEffect(() => {
     filterApplications();
   }, [applications, statusFilter, universityFilter, searchText]);
 
-  const loadApplications = () => {
+  const loadData = async () => {
     setLoading(true);
-    const apps = applicationService.getAll();
-    setApplications(apps);
-    setFilteredApps(apps);
-    setLoading(false);
+    try {
+      const [apps, allUsers, allUniversities] = await Promise.all([
+        applicationService.getAll(),
+        userService.getAll(),
+        universityService.getAll()
+      ]);
+      setApplications(apps);
+      setFilteredApps(apps);
+      setUsers(allUsers);
+      setUniversities(allUniversities);
+    } catch (error) {
+      message.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filterApplications = () => {
@@ -45,14 +58,14 @@ const ApplicationManagement: React.FC = () => {
     }
     
     if (universityFilter !== 'all') {
-      filtered = filtered.filter(app => app.universityId === universityFilter);
+      filtered = filtered.filter(app => app.university_id === universityFilter);
     }
     
     if (searchText) {
       filtered = filtered.filter(app => {
-        const user = getUserInfo(app.userId);
-        return user?.fullName.toLowerCase().includes(searchText.toLowerCase()) ||
-               user?.email.toLowerCase().includes(searchText.toLowerCase()) ||
+        const user = users.find(u => u.id === app.user_id);
+        return user?.full_name?.toLowerCase().includes(searchText.toLowerCase()) ||
+               user?.email?.toLowerCase().includes(searchText.toLowerCase()) ||
                app.id.includes(searchText);
       });
     }
@@ -61,17 +74,17 @@ const ApplicationManagement: React.FC = () => {
   };
 
   const getUserInfo = (userId: string): User | null => {
-    const users = userService.getAll();
     return users.find(u => u.id === userId) || null;
   };
 
   const getUniversityName = (id: string) => {
-    const university = universityService.getById(id);
+    const university = universities.find(u => u.id === id);
     return university?.name || 'N/A';
   };
 
-  const getMajorName = (id: string) => {
-    const major = majorService.getById(id);
+  const getMajorName = async (id: string) => {
+    const majors = await majorService.getAll();
+    const major = majors.find(m => m.id === id);
     return major?.name || 'N/A';
   };
 
@@ -79,26 +92,34 @@ const ApplicationManagement: React.FC = () => {
     navigate(`/admin/applications/${id}`);
   };
 
-  const handleApprove = (id: string, userId: string) => {
+  const handleApprove = async (id: string, userId: string) => {
     Modal.confirm({
       title: 'Approve Application',
       content: 'Are you sure you want to approve this application?',
-      onOk: () => {
-        applicationService.updateStatus(id, 'approved', userId);
-        message.success('Application approved successfully');
-        loadApplications();
+      onOk: async () => {
+        try {
+          await applicationService.updateStatus(id, 'approved', userId);
+          message.success('Application approved successfully');
+          await loadData();
+        } catch (error) {
+          message.error('Failed to approve application');
+        }
       },
     });
   };
 
-  const handleReject = (id: string, userId: string) => {
+  const handleReject = async (id: string, userId: string) => {
     Modal.confirm({
       title: 'Reject Application',
       content: 'Are you sure you want to reject this application?',
-      onOk: () => {
-        applicationService.updateStatus(id, 'rejected', userId);
-        message.success('Application rejected successfully');
-        loadApplications();
+      onOk: async () => {
+        try {
+          await applicationService.updateStatus(id, 'rejected', userId);
+          message.success('Application rejected successfully');
+          await loadData();
+        } catch (error) {
+          message.error('Failed to reject application');
+        }
       },
     });
   };
@@ -114,29 +135,24 @@ const ApplicationManagement: React.FC = () => {
       title: 'Candidate',
       key: 'candidate',
       render: (_: any, record: Application) => {
-        const user = getUserInfo(record.userId);
-        return user ? user.fullName : 'N/A';
+        const user = getUserInfo(record.user_id);
+        return user ? user.full_name : 'N/A';
       },
     },
     {
       title: 'University',
       key: 'university',
-      render: (_: any, record: Application) => getUniversityName(record.universityId),
-    },
-    {
-      title: 'Major',
-      key: 'major',
-      render: (_: any, record: Application) => getMajorName(record.majorId),
+      render: (_: any, record: Application) => getUniversityName(record.university_id),
     },
     {
       title: 'Exam Score',
-      dataIndex: 'examScore',
-      key: 'examScore',
+      dataIndex: 'exam_score',
+      key: 'exam_score',
     },
     {
       title: 'Submission Date',
-      dataIndex: 'submissionDate',
-      key: 'submissionDate',
+      dataIndex: 'submission_date',
+      key: 'submission_date',
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
@@ -170,7 +186,7 @@ const ApplicationManagement: React.FC = () => {
                 type="link"
                 icon={<CheckOutlined />}
                 style={{ color: '#52c41a' }}
-                onClick={() => handleApprove(record.id, record.userId)}
+                onClick={() => handleApprove(record.id, record.user_id)}
               >
                 Approve
               </Button>
@@ -178,7 +194,7 @@ const ApplicationManagement: React.FC = () => {
                 type="link"
                 icon={<CloseOutlined />}
                 style={{ color: '#ff4d4f' }}
-                onClick={() => handleReject(record.id, record.userId)}
+                onClick={() => handleReject(record.id, record.user_id)}
               >
                 Reject
               </Button>
@@ -188,8 +204,6 @@ const ApplicationManagement: React.FC = () => {
       ),
     },
   ];
-
-  const universities = universityService.getAll();
 
   return (
     <div>

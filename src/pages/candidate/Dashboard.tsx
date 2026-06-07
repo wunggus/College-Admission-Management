@@ -4,7 +4,7 @@ import { FileTextOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircle
 import { useAuth } from '../../context/AuthContext';
 import { applicationService } from '../../services/application.service';
 import { notificationService } from '../../services/notification.service';
-import { Application, Notification } from '../../types';
+import { Application, Notification, University, Major } from '../../types';
 import { universityService } from '../../services/university.service';
 import { majorService } from '../../services/major.service';
 
@@ -15,13 +15,26 @@ const CandidateDashboard: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [universities, setUniversities] = useState<Record<string, University>>({});
+  const [majors, setMajors] = useState<Record<string, Major>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      const userApps = applicationService.getByUser(user.id);
-      setApplications(userApps);
+      loadData();
+    }
+  }, [user]);
+
+  const loadData = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [userApps, userNotifs] = await Promise.all([
+        applicationService.getByUser(user.id),
+        notificationService.getByUser(user.id)
+      ]);
       
-      const userNotifs = notificationService.getByUser(user.id);
+      setApplications(userApps);
       setNotifications(userNotifs.slice(0, 5));
       
       setStats({
@@ -30,31 +43,55 @@ const CandidateDashboard: React.FC = () => {
         approved: userApps.filter(a => a.status === 'approved').length,
         rejected: userApps.filter(a => a.status === 'rejected').length,
       });
+      
+      // Fetch universities and majors
+      const univMap: Record<string, University> = {};
+      const majorMap: Record<string, Major> = {};
+      
+      for (const app of userApps) {
+        if (!univMap[app.university_id]) {
+          const univ = await universityService.getById(app.university_id);
+          if (univ) univMap[app.university_id] = univ;
+        }
+        if (!majorMap[app.major_id]) {
+          const maj = await majorService.getById(app.major_id);
+          if (maj) majorMap[app.major_id] = maj;
+        }
+      }
+      
+      setUniversities(univMap);
+      setMajors(majorMap);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [user]);
+  };
 
   const getLatestApplication = () => {
     if (applications.length === 0) return null;
     return applications.sort((a, b) => 
-      new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime()
+      new Date(b.submission_date).getTime() - new Date(a.submission_date).getTime()
     )[0];
   };
 
   const getUniversityName = (universityId: string) => {
-    const university = universityService.getById(universityId);
-    return university?.name || 'Unknown';
+    return universities[universityId]?.name || 'Unknown';
   };
 
   const getMajorName = (majorId: string) => {
-    const major = majorService.getById(majorId);
-    return major?.name || 'Unknown';
+    return majors[majorId]?.name || 'Unknown';
   };
 
   const latestApp = getLatestApplication();
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div>
-      <Title level={2}>Welcome, {user?.fullName}!</Title>
+      <Title level={2}>Welcome, {user?.full_name}!</Title>
       
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         <Col xs={24} sm={12} lg={6}>
@@ -104,8 +141,8 @@ const CandidateDashboard: React.FC = () => {
           <Card title="Latest Application Status">
             {latestApp ? (
               <div>
-                <p><strong>University:</strong> {getUniversityName(latestApp.universityId)}</p>
-                <p><strong>Major:</strong> {getMajorName(latestApp.majorId)}</p>
+                <p><strong>University:</strong> {getUniversityName(latestApp.university_id)}</p>
+                <p><strong>Major:</strong> {getMajorName(latestApp.major_id)}</p>
                 <p><strong>Status:</strong> 
                   <Tag color={
                     latestApp.status === 'approved' ? 'green' : 
@@ -114,7 +151,7 @@ const CandidateDashboard: React.FC = () => {
                     {latestApp.status.toUpperCase()}
                   </Tag>
                 </p>
-                <p><strong>Submission Date:</strong> {new Date(latestApp.submissionDate).toLocaleDateString()}</p>
+                <p><strong>Submission Date:</strong> {new Date(latestApp.submission_date).toLocaleDateString()}</p>
               </div>
             ) : (
               <Empty description="No applications submitted yet" />
@@ -135,7 +172,7 @@ const CandidateDashboard: React.FC = () => {
                         <Text type="secondary">{notification.message}</Text>
                         <br />
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          {new Date(notification.createdAt).toLocaleString()}
+                          {new Date(notification.created_at).toLocaleString()}
                         </Text>
                       </>
                     }

@@ -1,50 +1,68 @@
-import { storage, generateId, getCurrentDateTime } from '../utils/storage';
+import { supabase } from '../utils/supabase';
 import { SubjectCombination } from '../types';
 
 export const subjectCombinationService = {
-  getAll: (): SubjectCombination[] => {
-    return storage.get<SubjectCombination[]>(storage.getKeys().SUBJECT_COMBINATIONS) || [];
+  getAll: async (): Promise<SubjectCombination[]> => {
+    const { data, error } = await supabase
+      .from('subject_combinations')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch subject combinations');
+    return data as SubjectCombination[];
   },
 
-  getByMajor: (majorId: string): SubjectCombination[] => {
-    const combinations = subjectCombinationService.getAll();
-    return combinations.filter(c => c.majorId === majorId);
+  getByMajor: async (majorId: string): Promise<SubjectCombination[]> => {
+    const { data, error } = await supabase
+      .from('subject_combinations')
+      .select('*')
+      .eq('major_id', majorId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch subject combinations');
+    return data as SubjectCombination[];
   },
 
-  getById: (id: string): SubjectCombination | null => {
-    const combinations = subjectCombinationService.getAll();
-    return combinations.find(c => c.id === id) || null;
+  getById: async (id: string): Promise<SubjectCombination | null> => {
+    const { data, error } = await supabase
+      .from('subject_combinations')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) return null;
+    return data as SubjectCombination;
   },
 
-  create: (data: Omit<SubjectCombination, 'id' | 'createdAt'>): SubjectCombination => {
-    const combinations = subjectCombinationService.getAll();
-    const newCombination: SubjectCombination = {
-      ...data,
-      id: generateId(),
-      createdAt: getCurrentDateTime(),
-    };
-    
-    combinations.push(newCombination);
-    storage.set(storage.getKeys().SUBJECT_COMBINATIONS, combinations);
-    return newCombination;
+  create: async (data: Omit<SubjectCombination, 'id' | 'createdAt'>): Promise<SubjectCombination> => {
+    const { data: newCombination, error } = await supabase
+      .from('subject_combinations')
+      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to create subject combination');
+    return newCombination as SubjectCombination;
   },
 
-  update: (id: string, data: Partial<SubjectCombination>): SubjectCombination => {
-    const combinations = subjectCombinationService.getAll();
-    const index = combinations.findIndex(c => c.id === id);
-    
-    if (index === -1) {
-      throw new Error('Subject combination not found');
-    }
-    
-    combinations[index] = { ...combinations[index], ...data };
-    storage.set(storage.getKeys().SUBJECT_COMBINATIONS, combinations);
-    return combinations[index];
+  update: async (id: string, data: Partial<SubjectCombination>): Promise<SubjectCombination> => {
+    const { data: updatedCombination, error } = await supabase
+      .from('subject_combinations')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to update subject combination');
+    return updatedCombination as SubjectCombination;
   },
 
-  delete: (id: string): void => {
-    const combinations = subjectCombinationService.getAll();
-    const filtered = combinations.filter(c => c.id !== id);
-    storage.set(storage.getKeys().SUBJECT_COMBINATIONS, filtered);
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('subject_combinations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error('Failed to delete subject combination');
   },
 };

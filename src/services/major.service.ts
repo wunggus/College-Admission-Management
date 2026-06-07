@@ -1,50 +1,68 @@
-import { storage, generateId, getCurrentDateTime } from '../utils/storage';
+import { supabase } from '../utils/supabase';
 import { Major } from '../types';
 
 export const majorService = {
-  getAll: (): Major[] => {
-    return storage.get<Major[]>(storage.getKeys().MAJORS) || [];
+  getAll: async (): Promise<Major[]> => {
+    const { data, error } = await supabase
+      .from('majors')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch majors');
+    return data as Major[];
   },
 
-  getByUniversity: (universityId: string): Major[] => {
-    const majors = majorService.getAll();
-    return majors.filter(m => m.universityId === universityId);
+  getByUniversity: async (universityId: string): Promise<Major[]> => {
+    const { data, error } = await supabase
+      .from('majors')
+      .select('*')
+      .eq('university_id', universityId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error('Failed to fetch majors');
+    return data as Major[];
   },
 
-  getById: (id: string): Major | null => {
-    const majors = majorService.getAll();
-    return majors.find(m => m.id === id) || null;
+  getById: async (id: string): Promise<Major | null> => {
+    const { data, error } = await supabase
+      .from('majors')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) return null;
+    return data as Major;
   },
 
-  create: (data: Omit<Major, 'id' | 'createdAt'>): Major => {
-    const majors = majorService.getAll();
-    const newMajor: Major = {
-      ...data,
-      id: generateId(),
-      createdAt: getCurrentDateTime(),
-    };
-    
-    majors.push(newMajor);
-    storage.set(storage.getKeys().MAJORS, majors);
-    return newMajor;
+  create: async (data: Omit<Major, 'id' | 'createdAt'>): Promise<Major> => {
+    const { data: newMajor, error } = await supabase
+      .from('majors')
+      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to create major');
+    return newMajor as Major;
   },
 
-  update: (id: string, data: Partial<Major>): Major => {
-    const majors = majorService.getAll();
-    const index = majors.findIndex(m => m.id === id);
-    
-    if (index === -1) {
-      throw new Error('Major not found');
-    }
-    
-    majors[index] = { ...majors[index], ...data };
-    storage.set(storage.getKeys().MAJORS, majors);
-    return majors[index];
+  update: async (id: string, data: Partial<Major>): Promise<Major> => {
+    const { data: updatedMajor, error } = await supabase
+      .from('majors')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to update major');
+    return updatedMajor as Major;
   },
 
-  delete: (id: string): void => {
-    const majors = majorService.getAll();
-    const filtered = majors.filter(m => m.id !== id);
-    storage.set(storage.getKeys().MAJORS, filtered);
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('majors')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error('Failed to delete major');
   },
 };

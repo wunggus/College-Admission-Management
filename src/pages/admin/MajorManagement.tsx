@@ -20,11 +20,20 @@ const MajorManagement: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const majorData = majorService.getAll();
-    const universityData = universityService.getAll();
-    setMajors(majorData);
-    setUniversities(universityData);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [majorData, universityData] = await Promise.all([
+        majorService.getAll(),
+        universityService.getAll()
+      ]);
+      setMajors(majorData);
+      setUniversities(universityData);
+    } catch (error) {
+      message.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAdd = () => {
@@ -39,10 +48,14 @@ const MajorManagement: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleDelete = (id: string) => {
-    majorService.delete(id);
-    message.success('Major deleted successfully');
-    loadData();
+  const handleDelete = async (id: string) => {
+    try {
+      await majorService.delete(id);
+      message.success('Major deleted successfully');
+      await loadData();
+    } catch (error) {
+      message.error('Failed to delete major');
+    }
   };
 
   const handleSubmit = async (values: any) => {
@@ -56,7 +69,7 @@ const MajorManagement: React.FC = () => {
         message.success('Major created successfully');
       }
       setModalVisible(false);
-      loadData();
+      await loadData();
     } catch (error: any) {
       message.error(error.message || 'Operation failed');
     } finally {
@@ -78,12 +91,12 @@ const MajorManagement: React.FC = () => {
     {
       title: 'University',
       key: 'university',
-      render: (_: any, record: Major) => getUniversityName(record.universityId),
+      render: (_: any, record: Major) => getUniversityName(record.university_id),
     },
     {
       title: 'Created Date',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
@@ -128,6 +141,7 @@ const MajorManagement: React.FC = () => {
           columns={columns}
           dataSource={majors}
           rowKey="id"
+          loading={loading}
           pagination={{ pageSize: 10 }}
         />
       </Card>
@@ -148,7 +162,7 @@ const MajorManagement: React.FC = () => {
           </Form.Item>
           
           <Form.Item
-            name="universityId"
+            name="university_id"
             label="University"
             rules={[{ required: true, message: 'Please select university' }]}
           >

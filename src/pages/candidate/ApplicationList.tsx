@@ -6,7 +6,7 @@ import { applicationService } from '../../services/application.service';
 import { universityService } from '../../services/university.service';
 import { majorService } from '../../services/major.service';
 import { subjectCombinationService } from '../../services/subjectCombination.service';
-import { Application } from '../../types';
+import { Application, University, Major, SubjectCombination } from '../../types';
 
 const { Title } = Typography;
 
@@ -15,13 +15,53 @@ const ApplicationList: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [universities, setUniversities] = useState<Record<string, University>>({});
+  const [majors, setMajors] = useState<Record<string, Major>>({});
+  const [combinations, setCombinations] = useState<Record<string, SubjectCombination>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      const userApps = applicationService.getByUser(user.id);
-      setApplications(userApps);
+      loadApplications();
     }
   }, [user]);
+
+  const loadApplications = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const userApps = await applicationService.getByUser(user.id);
+      setApplications(userApps);
+      
+      // Fetch all related data
+      const univMap: Record<string, University> = {};
+      const majorMap: Record<string, Major> = {};
+      const comboMap: Record<string, SubjectCombination> = {};
+      
+      for (const app of userApps) {
+        if (!univMap[app.university_id]) {
+          const univ = await universityService.getById(app.university_id);
+          if (univ) univMap[app.university_id] = univ;
+        }
+        if (!majorMap[app.major_id]) {
+          const maj = await majorService.getById(app.major_id);
+          if (maj) majorMap[app.major_id] = maj;
+        }
+        if (!comboMap[app.subject_combination_id]) {
+          const combo = await subjectCombinationService.getById(app.subject_combination_id);
+          if (combo) comboMap[app.subject_combination_id] = combo;
+        }
+      }
+      
+      setUniversities(univMap);
+      setMajors(majorMap);
+      setCombinations(comboMap);
+    } catch (error) {
+      console.error('Failed to load applications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusTag = (status: string) => {
     const colors = {
@@ -33,17 +73,15 @@ const ApplicationList: React.FC = () => {
   };
 
   const getUniversityName = (id: string) => {
-    const university = universityService.getById(id);
-    return university?.name || 'N/A';
+    return universities[id]?.name || 'N/A';
   };
 
   const getMajorName = (id: string) => {
-    const major = majorService.getById(id);
-    return major?.name || 'N/A';
+    return majors[id]?.name || 'N/A';
   };
 
   const getSubjectCombinationName = (id: string) => {
-    const combo = subjectCombinationService.getById(id);
+    const combo = combinations[id];
     return combo ? `${combo.code} - ${combo.name}` : 'N/A';
   };
 
@@ -57,17 +95,17 @@ const ApplicationList: React.FC = () => {
     {
       title: 'University',
       key: 'university',
-      render: (_: any, record: Application) => getUniversityName(record.universityId),
+      render: (_: any, record: Application) => getUniversityName(record.university_id),
     },
     {
       title: 'Major',
       key: 'major',
-      render: (_: any, record: Application) => getMajorName(record.majorId),
+      render: (_: any, record: Application) => getMajorName(record.major_id),
     },
     {
       title: 'Submission Date',
-      dataIndex: 'submissionDate',
-      key: 'submissionDate',
+      dataIndex: 'submission_date',
+      key: 'submission_date',
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
@@ -93,6 +131,10 @@ const ApplicationList: React.FC = () => {
       ),
     },
   ];
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
@@ -121,26 +163,26 @@ const ApplicationList: React.FC = () => {
           <Descriptions bordered column={1}>
             <Descriptions.Item label="Application ID">{selectedApp.id}</Descriptions.Item>
             <Descriptions.Item label="University">
-              {getUniversityName(selectedApp.universityId)}
+              {getUniversityName(selectedApp.university_id)}
             </Descriptions.Item>
             <Descriptions.Item label="Major">
-              {getMajorName(selectedApp.majorId)}
+              {getMajorName(selectedApp.major_id)}
             </Descriptions.Item>
             <Descriptions.Item label="Subject Combination">
-              {getSubjectCombinationName(selectedApp.subjectCombinationId)}
+              {getSubjectCombinationName(selectedApp.subject_combination_id)}
             </Descriptions.Item>
-            <Descriptions.Item label="Exam Score">{selectedApp.examScore}</Descriptions.Item>
+            <Descriptions.Item label="Exam Score">{selectedApp.exam_score}</Descriptions.Item>
             <Descriptions.Item label="Priority Category">
-              {selectedApp.priorityCategory === 'none' ? 'No Priority' : 
-               selectedApp.priorityCategory === 'group1' ? 'Group 1 (Ethnic minority)' :
-               selectedApp.priorityCategory === 'group2' ? 'Group 2 (Policy beneficiaries)' :
+              {selectedApp.priority_category === 'none' ? 'No Priority' : 
+               selectedApp.priority_category === 'group1' ? 'Group 1 (Ethnic minority)' :
+               selectedApp.priority_category === 'group2' ? 'Group 2 (Policy beneficiaries)' :
                'Group 3 (Other priorities)'}
             </Descriptions.Item>
             <Descriptions.Item label="Status">
               {getStatusTag(selectedApp.status)}
             </Descriptions.Item>
             <Descriptions.Item label="Submission Date">
-              {new Date(selectedApp.submissionDate).toLocaleString()}
+              {new Date(selectedApp.submission_date).toLocaleString()}
             </Descriptions.Item>
             {selectedApp.notes && (
               <Descriptions.Item label="Notes">{selectedApp.notes}</Descriptions.Item>

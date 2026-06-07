@@ -25,20 +25,25 @@ const ApplicationForm: React.FC = () => {
   const [idCardFile, setIdCardFile] = useState<string>();
 
   useEffect(() => {
-    setUniversities(universityService.getAll());
+    loadUniversities();
   }, []);
 
-  const handleUniversityChange = (universityId: string) => {
-    const majorsForUniversity = majorService.getByUniversity(universityId);
+  const loadUniversities = async () => {
+    const data = await universityService.getAll();
+    setUniversities(data);
+  };
+
+  const handleUniversityChange = async (universityId: string) => {
+    const majorsForUniversity = await majorService.getByUniversity(universityId);
     setMajors(majorsForUniversity);
-    form.setFieldsValue({ majorId: undefined, subjectCombinationId: undefined });
+    form.setFieldsValue({ major_id: undefined, subject_combination_id: undefined });
     setSubjectCombinations([]);
   };
 
-  const handleMajorChange = (majorId: string) => {
-    const combinations = subjectCombinationService.getByMajor(majorId);
+  const handleMajorChange = async (majorId: string) => {
+    const combinations = await subjectCombinationService.getByMajor(majorId);
     setSubjectCombinations(combinations);
-    form.setFieldsValue({ subjectCombinationId: undefined });
+    form.setFieldsValue({ subject_combination_id: undefined });
   };
 
   const handleFileUpload = (file: File, type: 'transcript' | 'idCard'): Promise<string> => {
@@ -64,15 +69,15 @@ const ApplicationForm: React.FC = () => {
     setLoading(true);
     try {
       await applicationService.create({
-        userId: user.id,
-        universityId: values.universityId,
-        majorId: values.majorId,
-        subjectCombinationId: values.subjectCombinationId,
-        examScore: values.examScore,
-        priorityCategory: values.priorityCategory,
+        user_id: user.id,
+        university_id: values.university_id,
+        major_id: values.major_id,
+        subject_combination_id: values.subject_combination_id,
+        exam_score: values.exam_score,
+        priority_category: values.priority_category,
         notes: values.notes,
-        transcriptFile: transcriptFile,
-        idCardFile: idCardFile,
+        transcript_file: transcriptFile,
+        id_card_file: idCardFile,
       });
       
       message.success('Application submitted successfully!');
@@ -94,7 +99,7 @@ const ApplicationForm: React.FC = () => {
           onFinish={onFinish}
         >
           <Form.Item
-            name="universityId"
+            name="university_id"
             label="Select University"
             rules={[{ required: true, message: 'Please select a university' }]}
           >
@@ -110,14 +115,14 @@ const ApplicationForm: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="majorId"
+            name="major_id"
             label="Select Major"
             rules={[{ required: true, message: 'Please select a major' }]}
           >
             <Select
               placeholder="Choose a major"
               onChange={handleMajorChange}
-              disabled={!form.getFieldValue('universityId')}
+              disabled={!form.getFieldValue('university_id')}
               showSearch
             >
               {majors.map(major => (
@@ -127,13 +132,13 @@ const ApplicationForm: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="subjectCombinationId"
+            name="subject_combination_id"
             label="Select Subject Combination"
             rules={[{ required: true, message: 'Please select a subject combination' }]}
           >
             <Select
               placeholder="Choose subject combination"
-              disabled={!form.getFieldValue('majorId')}
+              disabled={!form.getFieldValue('major_id')}
             >
               {subjectCombinations.map(combo => (
                 <Option key={combo.id} value={combo.id}>
@@ -144,7 +149,7 @@ const ApplicationForm: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="examScore"
+            name="exam_score"
             label="Exam Score"
             rules={[{ required: true, message: 'Please enter your exam score' }]}
           >
@@ -158,7 +163,7 @@ const ApplicationForm: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="priorityCategory"
+            name="priority_category"
             label="Priority Category"
             rules={[{ required: true, message: 'Please select priority category' }]}
           >
@@ -170,10 +175,7 @@ const ApplicationForm: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="notes"
-            label="Additional Notes"
-          >
+          <Form.Item name="notes" label="Additional Notes">
             <TextArea rows={4} placeholder="Any additional information you'd like to provide" />
           </Form.Item>
 
