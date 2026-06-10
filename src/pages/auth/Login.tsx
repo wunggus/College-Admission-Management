@@ -17,7 +17,7 @@ const Login: React.FC = () => {
     try {
       await login(values.email, values.password);
       message.success('Login successful!');
-      message
+      
       const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
      
       if (currentUser.role === 'admin') {
