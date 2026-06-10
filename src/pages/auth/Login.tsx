@@ -11,26 +11,26 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<'candidate' | 'admin'>('candidate');
-  
+
   const onFinish = async (values: any) => {
-    setLoading(true);
-    try {
-      await login(values.email, values.password);
-      message.success('Login successful!');
-      
-      const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
-     
-      if (currentUser.role === 'admin') {
-        window.location.href = '/admin/dashboard';
-      } else {
-        window.location.href = '/candidate/dashboard';
-      }
-    } catch (error: any) {
-      message.error(error.message || 'Login failed');
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    await login(values.email, values.password);
+    message.success('Login successful!');
+    
+    const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+    
+    if (currentUser.role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/candidate/dashboard');
     }
-  };
+  } catch (error: any) {
+    message.error(error.message || 'Login failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fillAdminCredentials = () => {
     onFinish({
