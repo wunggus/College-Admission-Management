@@ -11,19 +11,19 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<'candidate' | 'admin'>('candidate');
-
+  
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
       await login(values.email, values.password);
       message.success('Login successful!');
-      
-      // Navigate based on user role (will be determined by the auth service)
-      const currentUser = JSON.parse(localStorage.getItem('admission_auth') || '{}');
+      message
+      const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+     
       if (currentUser.role === 'admin') {
-        navigate('/admin/dashboard');
+        window.location.href = '/admin/dashboard';
       } else {
-        navigate('/candidate/dashboard');
+        window.location.href = '/candidate/dashboard';
       }
     } catch (error: any) {
       message.error(error.message || 'Login failed');
